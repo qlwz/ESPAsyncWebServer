@@ -727,6 +727,12 @@ AsyncWebServerResponse * AsyncWebServerRequest::beginResponse_P(int code, const 
 }
 
 void AsyncWebServerRequest::send(int code, const String& contentType, const String& content){
+    if (chunked) {
+        ((AsyncResponseStream*)_response)->setCode(code);
+        ((AsyncResponseStream*)_response)->setContentType(contentType);
+        ((AsyncResponseStream*)_response)->print(content);
+        return;
+    }
   send(beginResponse(code, contentType, content));
 }
 
@@ -759,6 +765,12 @@ void AsyncWebServerRequest::send_P(int code, const String& contentType, const ui
 }
 
 void AsyncWebServerRequest::send_P(int code, const String& contentType, PGM_P content, AwsTemplateProcessor callback){
+    if (chunked) {
+        ((AsyncResponseStream*)_response)->setCode(code);
+        ((AsyncResponseStream*)_response)->setContentType(contentType);
+        ((AsyncResponseStream*)_response)->print(content);
+        return;
+    }
   send(beginResponse_P(code, contentType, content, callback));
 }
 
@@ -932,4 +944,26 @@ bool AsyncWebServerRequest::isExpectedRequestedConnType(RequestedConnectionType 
     if ((erct2 != RCT_NOT_USED) && (erct2 == _reqconntype)) res = true;
     if ((erct3 != RCT_NOT_USED) && (erct3 == _reqconntype)) res = true;
     return res;
+}
+
+
+void AsyncWebServerRequest::setContentLength(const size_t contentLength) {
+    chunked = true;
+    _response = this->beginResponseStream("text/html");
+}
+
+void AsyncWebServerRequest::sendContent_P(PGM_P content) {
+    ((AsyncResponseStream*)_response)->print(content);
+}
+
+void AsyncWebServerRequest::sendContent(const String& content) {
+    ((AsyncResponseStream*)_response)->print(content.c_str());
+}
+
+void AsyncWebServerRequest::sendContent() {
+    this->send(_response);
+}
+
+void AsyncWebServerRequest::sendHeader(const String& name, const String& value, bool first) {
+    _response->addHeader(name, value);
 }
